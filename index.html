@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yugabyte DB Dump Script</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+        }
+        pre {
+            background: #272822;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        code {
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+<h1>Yugabyte DB Dump and Restore Script</h1>
+<p>Follow these steps to dump and restore schemas from YugabyteDB:</p>
+<pre><code># First go to /yugabyte-2.23.1.0/postgres/bin
+# Create one blank file &lt;name&gt;.sh
+# Copy and paste the provided file  ---> change the password and host IP accordingly
+# Give permission for execution --> chmod +x &lt;name&gt;.sh
+# Save the file and run --> ./&lt;name&gt;.sh
+
+#!/bin/bash
+
+# Set the password for the database user
+export PGPASSWORD='Tru$TtApP@23'
+
+# Database connection details
+HOST="172.31.2.87"
+PORT="5433"
+USER="appuser"
+DB_NAME="mfi_qa1"
+
+# List of schemas to dump
+SCHEMAS=("mfi_approval" "mfi_masterdata")
+
+# Output directory
+OUTPUT_DIR="./dumps"
+
+# Local database details for restoration
+LOCAL_DB_NAME="yugabyte"
+LOCAL_USER="yugabyte"
+
+# Create the output directory if it doesn't exist
+mkdir -p $OUTPUT_DIR
+
+# Function to dump schemas into separate files
+dump_schemas() {
+    echo "Dumping schemas into separate files..."
+    for schema in "${SCHEMAS[@]}"; do
+        output_file="$OUTPUT_DIR/${schema}.sql"
+        echo "Dumping schema $schema to $output_file"
+        ./ysql_dump -h $HOST -p $PORT -U $USER -d $DB_NAME --schema $schema --no-owner -vvv -f $output_file
+        if [ $? -ne 0 ]; then
+            echo "Error dumping schema $schema"
+            exit 1
+        fi
+    done
+}
+
+# Function to restore schemas into the local database
+restore_schemas() {
+    echo "Restoring schemas into the local database..."
+    for schema in "${SCHEMAS[@]}"; do
+        input_file="$OUTPUT_DIR/${schema}.sql"
+        echo "Restoring schema $schema from $input_file"
+        ./ysqlsh -h localhost -U $LOCAL_USER -d $LOCAL_DB_NAME -f $input_file
+        if [ $? -ne 0 ]; then
+            echo "Error restoring schema $schema"
+            exit 1
+        fi
+    done
+}
+
+# Execute the dump
+dump_schemas
+
+# Restore the schemas into the local database
+restore_schemas
+
+# Done
+echo "Schema dump and restoration completed."
+    </code></pre>
+</body>
+</html>
